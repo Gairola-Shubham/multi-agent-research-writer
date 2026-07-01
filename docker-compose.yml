@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: research_writer_backend
+    ports:
+      - "${BACKEND_PORT:-8000}:${BACKEND_PORT:-8000}"
+    volumes:
+      - .:/app
+      - chroma_data:/app/data/chroma
+    environment:
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=${BACKEND_PORT:-8000}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - LLM_MODEL=${LLM_MODEL:-qwen2.5:7b}
+      - CHROMA_DB_PATH=/app/data/chroma
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: research_writer_frontend
+    command: streamlit run frontend/app.py --server.port=${FRONTEND_PORT:-8501} --server.address=0.0.0.0
+    ports:
+      - "${FRONTEND_PORT:-8501}:${FRONTEND_PORT:-8501}"
+    volumes:
+      - .:/app
+    environment:
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=${BACKEND_PORT:-8000}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - LLM_MODEL=${LLM_MODEL:-qwen2.5:7b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  chroma_data:
