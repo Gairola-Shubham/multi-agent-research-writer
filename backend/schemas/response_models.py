@@ -13,5 +13,6 @@ class ReviewBlock(BaseModel):
 class ResearchResponse(BaseModel):
     topic: str = Field(..., description="The research topic.")
     title: str = Field(..., description="The compiled article title.")
-    markdown: str = Field(..., description="The complete report draft in Markdown format.")
+    final_markdown: str = Field(..., description="The refined and edited article Markdown.")
     review: ReviewBlock = Field(..., description="Peer review feedback report.")
+    changes_applied: List[str] = Field(..., description="The changes applied by the Editor.")

@@ -4,6 +4,7 @@ from backend.agents.planner_agent import PlannerAgent
 from backend.agents.research_agent import ResearchAgent
 from backend.agents.reviewer_agent import ReviewerAgent
 from backend.agents.writer_agent import WriterAgent
+from backend.agents.editor_agent import EditorAgent
 from backend.core.logger import logger
 from backend.models.ollama_client import (
     OllamaConnectionError,
@@ -20,6 +21,7 @@ planner = PlannerAgent()
 research_agent = ResearchAgent()
 writer_agent = WriterAgent()
 reviewer_agent = ReviewerAgent()
+editor_agent = EditorAgent()
 
 @router.get("/")
 async def root():
@@ -77,9 +79,21 @@ async def research(payload: ResearchRequest):
             logger.error(f"Review execution failed for topic '{payload.topic}': {e}")
             raise ValueError(f"Failed to review report: {e}")
 
+        logger.info(f"Editor execution started for topic: '{payload.topic}'")
+        try:
+            editor_result = editor_agent.edit_report(report_result, review_result)
+            logger.info(f"Editor execution completed successfully for topic: '{payload.topic}'")
+            logger.info(f"Editor changes applied: {editor_result.get('changes_applied')} for topic: '{payload.topic}'")
+        except ValueError as e:
+            logger.error(f"Editor execution failed for topic '{payload.topic}': {e}")
+            raise ValueError(f"Failed to edit report: {e}")
+
         final_result = {
-            **report_result,
-            "review": review_result
+            "topic": editor_result["topic"],
+            "title": editor_result["title"],
+            "final_markdown": editor_result["final_markdown"],
+            "review": review_result,
+            "changes_applied": editor_result["changes_applied"]
         }
         return ResearchResponse(**final_result)
     except ValueError as e:

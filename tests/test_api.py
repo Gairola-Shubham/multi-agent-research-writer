@@ -55,15 +55,23 @@ def test_research_endpoint_success():
         "suggestions": ["Fix typo"],
         "ready_for_editing": True
     }
+    mock_editor = {
+        "topic": "Quantum Computing",
+        "title": "Future of Quantum Computing Refined",
+        "final_markdown": "# Future of Quantum Computing Refined\n\nThis is the refined markdown content.",
+        "changes_applied": ["Fixed grammar", "Polished title"]
+    }
     with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
          patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
          patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
-         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report:
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
         
         mock_create_plan.return_value = mock_plan
         mock_conduct_research.return_value = mock_research
         mock_write_report.return_value = mock_report
         mock_review_report.return_value = mock_review
+        mock_edit_report.return_value = mock_editor
         
         response = client.post(
             "/research",
@@ -72,9 +80,10 @@ def test_research_endpoint_success():
         assert response.status_code == 200
         data = response.json()
         assert data["topic"] == "Quantum Computing"
-        assert data["title"] == "Future of Quantum Computing"
-        assert data["markdown"] == "# Future of Quantum Computing\n\nThis is the markdown content."
+        assert data["title"] == "Future of Quantum Computing Refined"
+        assert data["final_markdown"] == "# Future of Quantum Computing Refined\n\nThis is the refined markdown content."
         assert data["review"] == mock_review
+        assert data["changes_applied"] == ["Fixed grammar", "Polished title"]
 
 def test_research_endpoint_writer_failure():
     mock_plan = {
@@ -95,7 +104,8 @@ def test_research_endpoint_writer_failure():
     with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
          patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
          patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
-         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report:
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
         
         mock_create_plan.return_value = mock_plan
         mock_conduct_research.return_value = mock_research
@@ -108,6 +118,7 @@ def test_research_endpoint_writer_failure():
         assert response.status_code == 422
         assert "Failed to generate structured research" in response.json()["detail"]
         mock_review_report.assert_not_called()
+        mock_edit_report.assert_not_called()
 
 def test_research_endpoint_malformed_research_output():
     mock_plan = {
@@ -117,7 +128,8 @@ def test_research_endpoint_malformed_research_output():
     with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
          patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
          patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
-         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report:
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
         
         mock_create_plan.return_value = mock_plan
         mock_conduct_research.side_effect = ValueError("Research agent malformed output")
@@ -130,12 +142,101 @@ def test_research_endpoint_malformed_research_output():
         assert "Failed to generate structured research" in response.json()["detail"]
         mock_write_report.assert_not_called()
         mock_review_report.assert_not_called()
+        mock_edit_report.assert_not_called()
+
+def test_research_endpoint_malformed_reviewer_output():
+    mock_plan = {
+        "topic": "Quantum Computing",
+        "sections": ["Intro"]
+    }
+    mock_research = {
+        "topic": "Quantum Computing",
+        "research": [
+            {
+                "section": "Intro",
+                "summary": "Summary text",
+                "key_points": [],
+                "suggested_subtopics": []
+            }
+        ]
+    }
+    mock_report = {
+        "topic": "Quantum Computing",
+        "title": "Quantum Computing Overview",
+        "markdown": "# Intro"
+    }
+    with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
+         patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
+         patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
+        
+        mock_create_plan.return_value = mock_plan
+        mock_conduct_research.return_value = mock_research
+        mock_write_report.return_value = mock_report
+        mock_review_report.side_effect = ValueError("Reviewer failed to generate JSON")
+        
+        response = client.post(
+            "/research",
+            json={"topic": "Quantum Computing", "style": "Technical", "depth": "Standard"}
+        )
+        assert response.status_code == 422
+        assert "Failed to generate structured research" in response.json()["detail"]
+        mock_edit_report.assert_not_called()
+
+def test_research_endpoint_editor_failure():
+    mock_plan = {
+        "topic": "Quantum Computing",
+        "sections": ["Intro"]
+    }
+    mock_research = {
+        "topic": "Quantum Computing",
+        "research": [
+            {
+                "section": "Intro",
+                "summary": "Summary text",
+                "key_points": [],
+                "suggested_subtopics": []
+            }
+        ]
+    }
+    mock_report = {
+        "topic": "Quantum Computing",
+        "title": "Quantum Computing Overview",
+        "markdown": "# Intro"
+    }
+    mock_review = {
+        "score": 90,
+        "strengths": ["Clear intro"],
+        "issues": ["Typo"],
+        "suggestions": ["Fix typo"],
+        "ready_for_editing": True
+    }
+    with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
+         patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
+         patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
+        
+        mock_create_plan.return_value = mock_plan
+        mock_conduct_research.return_value = mock_research
+        mock_write_report.return_value = mock_report
+        mock_review_report.return_value = mock_review
+        mock_edit_report.side_effect = ValueError("Editor failed to generate JSON")
+        
+        response = client.post(
+            "/research",
+            json={"topic": "Quantum Computing", "style": "Technical", "depth": "Standard"}
+        )
+        assert response.status_code == 422
+        assert "Failed to generate structured research" in response.json()["detail"]
 
 def test_research_endpoint_ollama_offline():
     with patch("backend.api.routes.planner.create_plan") as mock_create_plan, \
          patch("backend.api.routes.research_agent.conduct_research") as mock_conduct_research, \
          patch("backend.api.routes.writer_agent.write_report") as mock_write_report, \
-         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report:
+         patch("backend.api.routes.reviewer_agent.review_report") as mock_review_report, \
+         patch("backend.api.routes.editor_agent.edit_report") as mock_edit_report:
         
         mock_create_plan.side_effect = OllamaConnectionError("Ollama host offline")
         response = client.post(
@@ -147,3 +248,4 @@ def test_research_endpoint_ollama_offline():
         mock_conduct_research.assert_not_called()
         mock_write_report.assert_not_called()
         mock_review_report.assert_not_called()
+        mock_edit_report.assert_not_called()
