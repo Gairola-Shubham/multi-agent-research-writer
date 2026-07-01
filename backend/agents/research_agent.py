@@ -1,13 +1,25 @@
 import json
+import uuid
 from typing import Dict, Any, List, Optional
 from backend.services.ai_service import ai_service
 from backend.search.search_service import SearchService
+from backend.memory.memory_service import MemoryService
 from backend.core.logger import logger
 
 class ResearchAgent:
-    def __init__(self, ai_service_instance=None, search_service_instance=None):
+    def __init__(
+        self,
+        ai_service_instance: Any = None,
+        search_service_instance: Any = None,
+        memory_service_instance: Any = None
+    ):
         self.ai_service = ai_service_instance or ai_service
         self.search_service = search_service_instance or SearchService()
+        try:
+            self.memory_service = memory_service_instance or MemoryService()
+        except Exception as e:
+            logger.error(f"ResearchAgent failed to initialize MemoryService: {e}. Running without memory.")
+            self.memory_service = None
 
     def conduct_research(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -31,17 +43,55 @@ class ResearchAgent:
         
         for section in sections:
             logger.info(f"ResearchAgent conducting research for section='{section}'")
+            query = f"{topic} {section}"
             
-            # Execute web search query combining topic and section
+            # Execute web search
             search_results = []
             try:
-                query = f"{topic} {section}"
-                logger.info(f"ResearchAgent executing search with query='{query}'")
-                search_results = self.search_service.search(query=query, max_results=3)
+                if self.search_service:
+                    logger.info(f"ResearchAgent executing search with query='{query}'")
+                    search_results = self.search_service.search(query=query, max_results=3)
+                else:
+                    logger.warning("ResearchAgent has no SearchService configured. Skipping web search.")
             except Exception as e:
-                logger.warning(f"ResearchAgent search failed for query='{topic} {section}': {e}. Continuing with LLM only.")
+                logger.warning(f"ResearchAgent search failed for query='{query}': {e}. Continuing with memory and LLM.")
+
+            # Execute memory search
+            memory_results = []
+            if self.memory_service:
+                try:
+                    logger.info(f"ResearchAgent executing memory search with query='{query}'")
+                    memory_results = self.memory_service.search(query=query, top_k=3)
+                except Exception as e:
+                    logger.warning(f"ResearchAgent memory search failed for query='{query}': {e}. Continuing with search and LLM.")
+            else:
+                logger.info("ResearchAgent has no MemoryService configured or initialized. Skipping memory retrieval.")
                 
-            section_data = self._research_section(topic, section, search_results)
+            section_data = self._research_section(topic, section, search_results, memory_results)
+            
+            # Save section research to memory database if available
+            if self.memory_service:
+                try:
+                    doc_id = f"research_{uuid.uuid4().hex}"
+                    doc_text = (
+                        f"Topic: {topic}\n"
+                        f"Section: {section}\n"
+                        f"Summary: {section_data.get('summary', '')}\n"
+                        f"Key Points: {', '.join(section_data.get('key_points', []))}"
+                    )
+                    doc_meta = {
+                        "topic": str(topic),
+                        "section": str(section),
+                        "summary": str(section_data.get("summary", "")),
+                        "key_points": json.dumps(section_data.get("key_points", [])),
+                        "suggested_subtopics": json.dumps(section_data.get("suggested_subtopics", [])),
+                        "sources": json.dumps(section_data.get("sources", []))
+                    }
+                    logger.info(f"ResearchAgent saving research output to memory with doc_id='{doc_id}'")
+                    self.memory_service.add_document(document_id=doc_id, text=doc_text, metadata=doc_meta)
+                except Exception as e:
+                    logger.warning(f"ResearchAgent failed to save research output to memory: {e}. Continuing.")
+                    
             research_results.append(section_data)
             
         logger.info(f"ResearchAgent successfully completed research workflow for topic='{topic}'")
@@ -50,7 +100,13 @@ class ResearchAgent:
             "research": research_results
         }
 
-    def _research_section(self, topic: str, section: str, search_results: List[Dict[str, str]]) -> Dict[str, Any]:
+    def _research_section(
+        self,
+        topic: str,
+        section: str,
+        search_results: List[Dict[str, str]],
+        memory_results: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         search_context = ""
         sources_list = []
         if search_results:
@@ -67,7 +123,31 @@ class ResearchAgent:
                     })
             search_context = "\n\n".join(search_context_items)
         else:
-            search_context = "No search results available. Synthesize using parametric knowledge."
+            search_context = "No web search results available."
+
+        memory_context = ""
+        if memory_results:
+            memory_context_items = []
+            for r in memory_results:
+                text = r.get("text", "")
+                metadata = r.get("metadata", {})
+                distance = r.get("distance", 0.0)
+                
+                if isinstance(metadata, dict):
+                    doc_topic = metadata.get("topic", "")
+                    doc_section = metadata.get("section", "")
+                else:
+                    doc_topic = ""
+                    doc_section = ""
+                
+                memory_context_items.append(
+                    f"Memory Text: {text}\n"
+                    f"Metadata: Topic='{doc_topic}', Section='{doc_section}'\n"
+                    f"Distance: {distance}"
+                )
+            memory_context = "\n\n".join(memory_context_items)
+        else:
+            memory_context = "No memory results available."
 
         prompt = (
             "You are a professional research agent. Your task is to conduct deep research and output a structured research document as a JSON object.\n"
@@ -81,11 +161,15 @@ class ResearchAgent:
             "}\n\n"
             f"Topic: {topic}\n\n"
             f"Section: {section}\n\n"
-            "Search Results Context:\n"
+            "Web Search Results:\n"
             "=======\n"
             f"{search_context}\n"
             "=======\n\n"
-            "Synthesize the research section now."
+            "Memory Results:\n"
+            "=======\n"
+            f"{memory_context}\n"
+            "=======\n\n"
+            "Synthesize the research section now by combining both web search results and memory results (prioritizing factual synthesis) to create the final structured research."
         )
         
         max_attempts = 3
