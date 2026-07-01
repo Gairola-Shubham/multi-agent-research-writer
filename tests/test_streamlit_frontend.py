@@ -4,6 +4,12 @@ from unittest.mock import patch, MagicMock
 from streamlit.testing.v1 import AppTest
 
 @pytest.fixture(autouse=True)
+def mock_export_service():
+    """Globally mock ExportService in frontend tests to avoid file generation."""
+    with patch("frontend.app.ExportService") as mock:
+        yield mock
+
+@pytest.fixture(autouse=True)
 def mock_requests_post():
     """Globally mock requests.post in frontend tests to avoid outbound HTTP calls."""
     with patch("requests.post") as mock:

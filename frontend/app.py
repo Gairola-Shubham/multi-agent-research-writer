@@ -1,6 +1,9 @@
 import os
+import tempfile
 import requests
 import streamlit as st
+from backend.utils.export_service import ExportService
+
 
 # Configure the Streamlit page layout and title
 st.set_page_config(
@@ -238,13 +241,49 @@ st.markdown("---")
 st.subheader("Export Report")
 export_col1, export_col2, export_col3 = st.columns(3)
 
-markdown_content = result.get("final_markdown", "") if has_result else ""
-report_title = result.get("title", "report") if has_result else "report"
+markdown_data = b""
+pdf_data = b""
+docx_data = b""
+report_title = "report"
+
+if has_result:
+    report_title = result.get("title", "report")
+    # Sanitize title for filename
+    report_title = "".join(c for c in report_title if c.isalnum() or c in (" ", "_", "-")).strip()
+    report_title = report_title.replace(" ", "_")
+    
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            md_path = os.path.join(tmp_dir, "report.md")
+            pdf_path = os.path.join(tmp_dir, "report.pdf")
+            docx_path = os.path.join(tmp_dir, "report.docx")
+            
+            # Generate exports using ExportService
+            ExportService.export_markdown(result, md_path)
+            ExportService.export_pdf(result, pdf_path)
+            ExportService.export_docx(result, docx_path)
+            
+            # Read files back into memory
+            if os.path.exists(md_path):
+                with open(md_path, "rb") as f:
+                    markdown_data = f.read()
+            if os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as f:
+                    pdf_data = f.read()
+            if os.path.exists(docx_path):
+                with open(docx_path, "rb") as f:
+                    docx_data = f.read()
+    except Exception as e:
+        st.error(f"⚠️ Export failed: Unable to generate downloadable documents. Error: {str(e)}")
+
+# Fallback to string encode if empty (e.g. if mocked or error)
+if not markdown_data and has_result:
+    markdown_data = result.get("final_markdown", "").encode("utf-8")
 
 with export_col1:
     st.download_button(
         "Download PDF",
-        data=b"PDF placeholder",
+        data=pdf_data,
         file_name=f"{report_title}.pdf",
         mime="application/pdf",
         disabled=not has_result,
@@ -253,7 +292,7 @@ with export_col1:
 with export_col2:
     st.download_button(
         "Download DOCX",
-        data=b"DOCX placeholder",
+        data=docx_data,
         file_name=f"{report_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         disabled=not has_result,
@@ -262,7 +301,7 @@ with export_col2:
 with export_col3:
     st.download_button(
         "Download Markdown",
-        data=markdown_content,
+        data=markdown_data,
         file_name=f"{report_title}.md",
         mime="text/markdown",
         disabled=not has_result,
