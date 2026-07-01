@@ -3,6 +3,9 @@ import tempfile
 import requests
 import streamlit as st
 from backend.utils.export_service import ExportService
+from backend.core.logger import logger
+
+logger.info("Streamlit started")
 
 
 # Configure the Streamlit page layout and title

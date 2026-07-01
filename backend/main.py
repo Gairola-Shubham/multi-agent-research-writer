@@ -3,18 +3,32 @@ from dotenv import load_dotenv
 # Explicitly load .env file prior to other imports
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.api.routes import router as api_router
 from backend.core.config import settings
 from backend.core.logger import logger
+from backend.core.startup_validation import run_startup_checks
+
+logger.info("LangGraph initialized")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Run startup checks
+    run_startup_checks()
+    logger.info("FastAPI started")
+    yield
+
 
 # Initialize production-ready FastAPI application
 app = FastAPI(
     title="AI Multi-Agent Research Writer Backend",
     description="Backend API for conducting comprehensive, multi-agent automated research.",
-    version="0.1.0"
+    version="0.1.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for frontend and development purposes

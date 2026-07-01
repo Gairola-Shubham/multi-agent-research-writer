@@ -26,7 +26,71 @@ async def root():
 @router.get("/health")
 async def health():
     logger.info("Health endpoint called.")
-    return ai_service.health_check()
+    from backend.core.config import settings
+    
+    # 1. Ollama status check
+    ollama_status = "unhealthy"
+    try:
+        if ai_service.client.check_connection():
+            if ai_service.client.has_model(settings.LLM_MODEL):
+                ollama_status = "healthy"
+            else:
+                ollama_status = "model_missing"
+    except Exception:
+        pass
+        
+    # 2. ChromaDB status check
+    chromadb_status = "unhealthy"
+    try:
+        import chromadb
+        client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
+        client.heartbeat()
+        chromadb_status = "healthy"
+    except Exception:
+        pass
+        
+    # 3. Search status check
+    search_status = "unhealthy"
+    try:
+        from backend.search.search_service import SearchService
+        ss = SearchService()
+        if ss is not None:
+            search_status = "healthy"
+    except Exception:
+        pass
+        
+    # 4. Memory status check
+    memory_status = "unhealthy"
+    try:
+        from backend.memory.memory_service import MemoryService
+        ms = MemoryService()
+        if ms.collection is not None:
+            memory_status = "healthy"
+    except Exception:
+        pass
+        
+    # 5. Workflow status check
+    workflow_status = "unhealthy"
+    try:
+        if workflow is not None and workflow.graph is not None:
+            workflow_status = "healthy"
+    except Exception:
+        pass
+        
+    # Overall status
+    status_val = "healthy"
+    if ollama_status != "healthy" or chromadb_status != "healthy":
+        status_val = "unhealthy"
+        
+    return {
+        "status": status_val,
+        "ollama": ollama_status,
+        "chromadb": chromadb_status,
+        "search": search_status,
+        "memory": memory_status,
+        "workflow": workflow_status,
+        "version": "0.1.0"
+    }
 
 @router.post("/research", response_model=ResearchResponse)
 async def research(payload: ResearchRequest):
