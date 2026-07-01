@@ -1,5 +1,6 @@
 import re
-from typing import Any, Dict
+from typing import Any
+
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,22 +22,20 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = DEFAULT_BACKEND_PORT
     API_V1_STR: str = API_V1_PATH
     FRONTEND_PORT: int = DEFAULT_FRONTEND_PORT
-    
+
     # Ollama / LLM configuration
     OLLAMA_BASE_URL: str = DEFAULT_OLLAMA_URL
     OLLAMA_HOST: str = DEFAULT_OLLAMA_URL
     LLM_MODEL: str = DEFAULT_LLM_MODEL
     DEFAULT_MODEL: str = DEFAULT_LLM_MODEL
-    
+
     CHROMA_DB_PATH: str = DEFAULT_CHROMA_DB_PATH
     MAX_SEARCH_RESULTS: int = DEFAULT_MAX_SEARCH_RESULTS
     LOG_LEVEL: str = DEFAULT_LOG_LEVEL
     REQUEST_TIMEOUT: int = DEFAULT_REQUEST_TIMEOUT
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     @model_validator(mode="before")

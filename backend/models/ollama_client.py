@@ -10,33 +10,43 @@ from backend.core.logger import logger
 
 class OllamaError(Exception):
     """Base exception for Ollama client errors."""
+
     pass
+
 
 class OllamaConnectionError(OllamaError):
     """Raised when the Ollama server is unreachable."""
+
     pass
+
 
 class OllamaTimeoutError(OllamaError):
     """Raised when a request to Ollama times out."""
+
     pass
+
 
 class OllamaModelNotFoundError(OllamaError):
     """Raised when the requested model is not found on the Ollama server."""
+
     pass
+
 
 class OllamaClient:
     def __init__(
         self,
         base_url: Optional[str] = None,
         default_model: Optional[str] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ):
         self.base_url = base_url or settings.OLLAMA_HOST or settings.OLLAMA_BASE_URL
         # Clean trailing slash if present
         if self.base_url.endswith("/"):
             self.base_url = self.base_url[:-1]
 
-        self.default_model = default_model or settings.DEFAULT_MODEL or settings.LLM_MODEL
+        self.default_model = (
+            default_model or settings.DEFAULT_MODEL or settings.LLM_MODEL
+        )
         self.timeout = timeout if timeout is not None else settings.REQUEST_TIMEOUT
 
         # Connection check is deferred until check_connection is explicitly called or property is accessed
@@ -58,30 +68,44 @@ class OllamaClient:
         path: str,
         max_retries: int = 3,
         backoff_factor: float = 0.5,
-        **kwargs
+        **kwargs,
     ) -> requests.Response:
         url = f"{self.base_url}{path}"
         timeout = kwargs.pop("timeout", self.timeout)
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.debug(f"Ollama API {method} {path} (attempt {attempt}/{max_retries})")
+                logger.debug(
+                    f"Ollama API {method} {path} (attempt {attempt}/{max_retries})"
+                )
                 response = requests.request(method, url, timeout=timeout, **kwargs)
                 response.raise_for_status()
                 return response
             except requests.Timeout as e:
-                logger.warning(f"Ollama request timeout on {method} {path} (attempt {attempt}/{max_retries}): {e}")
+                logger.warning(
+                    f"Ollama request timeout on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                )
                 if attempt == max_retries:
-                    raise OllamaTimeoutError(f"Request to Ollama timed out after {max_retries} attempts.") from e
+                    raise OllamaTimeoutError(
+                        f"Request to Ollama timed out after {max_retries} attempts."
+                    ) from e
             except requests.ConnectionError as e:
-                logger.warning(f"Ollama request connection error on {method} {path} (attempt {attempt}/{max_retries}): {e}")
+                logger.warning(
+                    f"Ollama request connection error on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                )
                 if attempt == max_retries:
-                    raise OllamaConnectionError(f"Cannot connect to Ollama server at {self.base_url}.") from e
+                    raise OllamaConnectionError(
+                        f"Cannot connect to Ollama server at {self.base_url}."
+                    ) from e
             except requests.RequestException as e:
-                logger.warning(f"Ollama request HTTP error on {method} {path} (attempt {attempt}/{max_retries}): {e}")
+                logger.warning(
+                    f"Ollama request HTTP error on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                )
                 if attempt == max_retries:
-                    status_code = getattr(e.response, 'status_code', None)
-                    raise OllamaError(f"Ollama API returned error: {e}. Status code: {status_code}") from e
+                    status_code = getattr(e.response, "status_code", None)
+                    raise OllamaError(
+                        f"Ollama API returned error: {e}. Status code: {status_code}"
+                    ) from e
 
             # Wait with exponential backoff
             time.sleep(backoff_factor * (2 ** (attempt - 1)))
@@ -101,7 +125,9 @@ class OllamaClient:
                 self._is_online = True
                 return True
             else:
-                logger.warning(f"Ollama connection check returned status {response.status_code} at {self.base_url}")
+                logger.warning(
+                    f"Ollama connection check returned status {response.status_code} at {self.base_url}"
+                )
                 self._is_online = False
                 return False
         except Exception as e:
@@ -129,7 +155,9 @@ class OllamaClient:
         try:
             models = self.list_models()
             target = model_name
-            target_no_tag = model_name.split(':')[0] if ':' in model_name else model_name
+            target_no_tag = (
+                model_name.split(":")[0] if ":" in model_name else model_name
+            )
 
             for m in models:
                 m_name = m.get("name", "")
@@ -137,13 +165,13 @@ class OllamaClient:
                     return True
 
                 # Compare without tag if tag wasn't specified in target
-                m_name_no_tag = m_name.split(':')[0] if ':' in m_name else m_name
+                m_name_no_tag = m_name.split(":")[0] if ":" in m_name else m_name
                 if m_name_no_tag == target_no_tag:
-                    if ':' not in target:
+                    if ":" not in target:
                         return True
                     # Compare specific tags
-                    target_tag = target.split(':')[1]
-                    m_tag = m_name.split(':')[1] if ':' in m_name else ""
+                    target_tag = target.split(":")[1]
+                    m_tag = m_name.split(":")[1] if ":" in m_name else ""
                     if target_tag == m_tag:
                         return True
             return False
@@ -167,7 +195,7 @@ class OllamaClient:
 
             for line in response.iter_lines():
                 if line:
-                    data = json.loads(line.decode('utf-8'))
+                    data = json.loads(line.decode("utf-8"))
                     status = data.get("status", "")
                     completed = data.get("completed", 0)
                     total = data.get("total", 0)
@@ -189,20 +217,18 @@ class OllamaClient:
         prompt: str,
         system: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Generate a synchronous text response.
         """
         # Verify model existence
         if not self.has_model(model):
-            raise OllamaModelNotFoundError(f"Model '{model}' is not installed on Ollama server.")
+            raise OllamaModelNotFoundError(
+                f"Model '{model}' is not installed on Ollama server."
+            )
 
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": False
-        }
+        payload = {"model": model, "prompt": prompt, "stream": False}
         if system:
             payload["system"] = system
         if options:
@@ -217,20 +243,18 @@ class OllamaClient:
         prompt: str,
         system: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ) -> Iterator[Dict[str, Any]]:
         """
         Yield streaming text generation chunks.
         """
         # Verify model existence
         if not self.has_model(model):
-            raise OllamaModelNotFoundError(f"Model '{model}' is not installed on Ollama server.")
+            raise OllamaModelNotFoundError(
+                f"Model '{model}' is not installed on Ollama server."
+            )
 
-        payload = {
-            "model": model,
-            "prompt": prompt,
-            "stream": True
-        }
+        payload = {"model": model, "prompt": prompt, "stream": True}
         if system:
             payload["system"] = system
         if options:
@@ -246,7 +270,7 @@ class OllamaClient:
 
             for line in response.iter_lines():
                 if line:
-                    yield json.loads(line.decode('utf-8'))
+                    yield json.loads(line.decode("utf-8"))
         except requests.Timeout as e:
             logger.error(f"Ollama stream timeout error: {e}")
             raise OllamaTimeoutError("Streaming request to Ollama timed out.") from e

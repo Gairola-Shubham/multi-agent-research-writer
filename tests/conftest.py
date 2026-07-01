@@ -1,5 +1,6 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # 1. Mock OllamaClient methods globally at import time to prevent real network calls
 check_conn_patcher = patch("backend.models.ollama_client.OllamaClient.check_connection", return_value=True)
@@ -52,11 +53,11 @@ def pytest_sessionfinish(session, exitstatus):
     list_models_patcher.stop()
     has_model_patcher.stop()
     request_patcher.stop()
-    
+
     ai_generate_patcher.stop()
     ai_stream_patcher.stop()
     ai_health_patcher.stop()
-    
+
     requests_get_patcher.stop()
     requests_post_patcher.stop()
     requests_request_patcher.stop()
