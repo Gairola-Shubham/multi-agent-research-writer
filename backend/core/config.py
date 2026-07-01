@@ -1,27 +1,57 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
 import re
+from typing import Any, Dict
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Centralized default constants
+DEFAULT_BACKEND_HOST = "0.0.0.0"
+DEFAULT_BACKEND_PORT = 8000
+DEFAULT_FRONTEND_PORT = 8501
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_LLM_MODEL = "qwen2.5:7b"
+DEFAULT_CHROMA_DB_PATH = "./data/chroma"
+DEFAULT_MAX_SEARCH_RESULTS = 5
+DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_REQUEST_TIMEOUT = 60
+API_V1_PATH = "/api/v1"
 
 
 class Settings(BaseSettings):
-    BACKEND_HOST: str = "0.0.0.0"
-    BACKEND_PORT: int = 8000
-    API_V1_STR: str = "/api/v1"
-    FRONTEND_PORT: int = 8501
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_HOST: str = "http://localhost:11434"
-    LLM_MODEL: str = "qwen2.5:7b"
-    DEFAULT_MODEL: str = "qwen2.5:7b"
-    CHROMA_DB_PATH: str = "./data/chroma"
-    MAX_SEARCH_RESULTS: int = 5
-    LOG_LEVEL: str = "INFO"
-    REQUEST_TIMEOUT: int = 60
+    BACKEND_HOST: str = DEFAULT_BACKEND_HOST
+    BACKEND_PORT: int = DEFAULT_BACKEND_PORT
+    API_V1_STR: str = API_V1_PATH
+    FRONTEND_PORT: int = DEFAULT_FRONTEND_PORT
+    
+    # Ollama / LLM configuration
+    OLLAMA_BASE_URL: str = DEFAULT_OLLAMA_URL
+    OLLAMA_HOST: str = DEFAULT_OLLAMA_URL
+    LLM_MODEL: str = DEFAULT_LLM_MODEL
+    DEFAULT_MODEL: str = DEFAULT_LLM_MODEL
+    
+    CHROMA_DB_PATH: str = DEFAULT_CHROMA_DB_PATH
+    MAX_SEARCH_RESULTS: int = DEFAULT_MAX_SEARCH_RESULTS
+    LOG_LEVEL: str = DEFAULT_LOG_LEVEL
+    REQUEST_TIMEOUT: int = DEFAULT_REQUEST_TIMEOUT
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore"
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_fallbacks(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Fallback OLLAMA_HOST to OLLAMA_BASE_URL
+            base_url = data.get("OLLAMA_BASE_URL") or DEFAULT_OLLAMA_URL
+            if not data.get("OLLAMA_HOST"):
+                data["OLLAMA_HOST"] = base_url
+            # Fallback DEFAULT_MODEL to LLM_MODEL
+            llm_model = data.get("LLM_MODEL") or DEFAULT_LLM_MODEL
+            if not data.get("DEFAULT_MODEL"):
+                data["DEFAULT_MODEL"] = llm_model
+        return data
 
     @field_validator("BACKEND_PORT", "FRONTEND_PORT")
     @classmethod

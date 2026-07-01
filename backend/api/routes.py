@@ -36,8 +36,8 @@ async def health():
                 ollama_status = "healthy"
             else:
                 ollama_status = "model_missing"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Health check - Ollama connection failed: {e}")
         
     # 2. ChromaDB status check
     chromadb_status = "unhealthy"
@@ -46,36 +46,56 @@ async def health():
         client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
         client.heartbeat()
         chromadb_status = "healthy"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Health check - ChromaDB persistent client check failed: {e}")
         
     # 3. Search status check
     search_status = "unhealthy"
     try:
-        from backend.search.search_service import SearchService
-        ss = SearchService()
-        if ss is not None:
+        # Reuse existing SearchService instance from workflow to avoid redundant initialization
+        if (
+            workflow is not None 
+            and hasattr(workflow, "research_agent") 
+            and workflow.research_agent is not None 
+            and getattr(workflow.research_agent, "search_service", None) is not None
+        ):
             search_status = "healthy"
-    except Exception:
-        pass
+        else:
+            from backend.search.search_service import SearchService
+            ss = SearchService()
+            if ss is not None:
+                search_status = "healthy"
+    except Exception as e:
+        logger.warning(f"Health check - Search status check failed: {e}")
         
     # 4. Memory status check
     memory_status = "unhealthy"
     try:
-        from backend.memory.memory_service import MemoryService
-        ms = MemoryService()
-        if ms.collection is not None:
-            memory_status = "healthy"
-    except Exception:
-        pass
+        # Reuse existing MemoryService instance from workflow to avoid redundant persistent client connections
+        if (
+            workflow is not None 
+            and hasattr(workflow, "research_agent") 
+            and workflow.research_agent is not None 
+            and getattr(workflow.research_agent, "memory_service", None) is not None
+        ):
+            ms = workflow.research_agent.memory_service
+            if ms.collection is not None:
+                memory_status = "healthy"
+        else:
+            from backend.memory.memory_service import MemoryService
+            ms = MemoryService()
+            if ms.collection is not None:
+                memory_status = "healthy"
+    except Exception as e:
+        logger.warning(f"Health check - Memory status check failed: {e}")
         
     # 5. Workflow status check
     workflow_status = "unhealthy"
     try:
         if workflow is not None and workflow.graph is not None:
             workflow_status = "healthy"
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Health check - Workflow status check failed: {e}")
         
     # Overall status
     status_val = "healthy"

@@ -39,8 +39,18 @@ class OllamaClient:
         self.default_model = default_model or settings.DEFAULT_MODEL or settings.LLM_MODEL
         self.timeout = timeout if timeout is not None else settings.REQUEST_TIMEOUT
 
-        # Automatic connection check on initialization (logged as warning if offline, does not block startup)
-        self.is_online = self.check_connection()
+        # Connection check is deferred until check_connection is explicitly called or property is accessed
+        self._is_online: Optional[bool] = None
+
+    @property
+    def is_online(self) -> bool:
+        if self._is_online is None:
+            self._is_online = self.check_connection()
+        return self._is_online
+
+    @is_online.setter
+    def is_online(self, value: bool) -> None:
+        self._is_online = value
 
     def _request(
         self,
@@ -88,15 +98,15 @@ class OllamaClient:
             response = requests.get(f"{self.base_url}/", timeout=3)
             if response.status_code == 200:
                 logger.info(f"Ollama connection check successful at {self.base_url}")
-                self.is_online = True
+                self._is_online = True
                 return True
             else:
                 logger.warning(f"Ollama connection check returned status {response.status_code} at {self.base_url}")
-                self.is_online = False
+                self._is_online = False
                 return False
         except Exception as e:
             logger.warning(f"Ollama connection check failed at {self.base_url}: {e}")
-            self.is_online = False
+            self._is_online = False
             return False
 
     def list_models(self) -> List[Dict[str, Any]]:

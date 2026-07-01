@@ -38,6 +38,14 @@ requests_get_patcher.start()
 requests_post_patcher.start()
 requests_request_patcher.start()
 
+@pytest.fixture(autouse=True)
+def reset_startup_checks_flag():
+    try:
+        import backend.core.startup_validation
+        backend.core.startup_validation._startup_checks_run = False
+    except ImportError:
+        pass
+
 # Cleanup patchers after session
 def pytest_sessionfinish(session, exitstatus):
     check_conn_patcher.stop()
