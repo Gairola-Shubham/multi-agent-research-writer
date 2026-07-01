@@ -1,10 +1,5 @@
 from fastapi import APIRouter, HTTPException, status
 
-from backend.agents.planner_agent import PlannerAgent
-from backend.agents.research_agent import ResearchAgent
-from backend.agents.reviewer_agent import ReviewerAgent
-from backend.agents.writer_agent import WriterAgent
-from backend.agents.editor_agent import EditorAgent
 from backend.core.logger import logger
 from backend.models.ollama_client import (
     OllamaConnectionError,
@@ -15,13 +10,10 @@ from backend.models.ollama_client import (
 from backend.schemas.request_models import ResearchRequest
 from backend.schemas.response_models import ResearchResponse
 from backend.services.ai_service import ai_service
+from backend.workflows.research_workflow import ResearchWorkflow
 
 router = APIRouter()
-planner = PlannerAgent()
-research_agent = ResearchAgent()
-writer_agent = WriterAgent()
-reviewer_agent = ReviewerAgent()
-editor_agent = EditorAgent()
+workflow = ResearchWorkflow()
 
 @router.get("/")
 async def root():
@@ -39,54 +31,28 @@ async def health():
 @router.post("/research", response_model=ResearchResponse)
 async def research(payload: ResearchRequest):
     logger.info(f"Research request received for topic: '{payload.topic}' (style: '{payload.style}', depth: '{payload.depth}')")
-    logger.info(f"Planner execution started for topic: '{payload.topic}'")
+    logger.info(f"Workflow started for topic: '{payload.topic}'")
 
     try:
         try:
-            plan = planner.create_plan(
+            workflow_state = workflow.run(
                 topic=payload.topic,
                 style=payload.style,
                 depth=payload.depth
             )
-            logger.info(f"Planner execution completed successfully for topic: '{payload.topic}'")
+            logger.info(f"Workflow completed successfully for topic: '{payload.topic}'")
         except ValueError as e:
-            logger.error(f"Planner validation error for topic '{payload.topic}': {e}")
-            raise ValueError(f"Failed to generate plan: {e}")
+            logger.error(f"Workflow execution validation error for topic '{payload.topic}': {e}")
+            raise ValueError(f"Failed to generate structured research: {e}")
+        except Exception as e:
+            logger.error(f"Workflow failed for topic '{payload.topic}': {e}")
+            raise
 
-        logger.info(f"Research execution started for topic: '{payload.topic}'")
-        try:
-            research_result = research_agent.conduct_research(plan)
-            logger.info(f"Research execution completed successfully for topic: '{payload.topic}'")
-        except ValueError as e:
-            logger.error(f"Research validation error for topic '{payload.topic}': {e}")
-            raise ValueError(f"Failed to generate research: {e}")
+        editor_result = workflow_state.get("final", {})
+        review_result = workflow_state.get("review", {})
 
-        logger.info(f"Writer execution started for topic: '{payload.topic}'")
-        try:
-            report_result = writer_agent.write_report(research_result)
-            logger.info(f"Writer execution completed successfully for topic: '{payload.topic}'")
-            logger.info(f"Markdown report generated successfully for topic: '{payload.topic}'")
-        except ValueError as e:
-            logger.error(f"Writer validation error for topic '{payload.topic}': {e}")
-            raise ValueError(f"Failed to generate report: {e}")
-
-        logger.info(f"Reviewer execution started for topic: '{payload.topic}'")
-        try:
-            review_result = reviewer_agent.review_report(report_result)
-            logger.info(f"Reviewer execution completed successfully for topic: '{payload.topic}'")
-            logger.info(f"Review score: {review_result.get('score')} for topic: '{payload.topic}'")
-        except ValueError as e:
-            logger.error(f"Review execution failed for topic '{payload.topic}': {e}")
-            raise ValueError(f"Failed to review report: {e}")
-
-        logger.info(f"Editor execution started for topic: '{payload.topic}'")
-        try:
-            editor_result = editor_agent.edit_report(report_result, review_result)
-            logger.info(f"Editor execution completed successfully for topic: '{payload.topic}'")
-            logger.info(f"Editor changes applied: {editor_result.get('changes_applied')} for topic: '{payload.topic}'")
-        except ValueError as e:
-            logger.error(f"Editor execution failed for topic '{payload.topic}': {e}")
-            raise ValueError(f"Failed to edit report: {e}")
+        if not editor_result or not review_result:
+            raise ValueError("Workflow state is missing required 'final' or 'review' fields.")
 
         final_result = {
             "topic": editor_result["topic"],
@@ -132,3 +98,4 @@ async def research(payload: ResearchRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}"
         )
+
