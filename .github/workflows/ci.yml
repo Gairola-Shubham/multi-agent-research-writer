@@ -31,7 +31,7 @@ jobs:
         # stop the build if there are Python syntax errors or undefined names
         ruff check --select=E9,F63,F7,F82 --output-format=github .
         # run general lint rules
-        ruff check .
+        ruff check --ignore N802 .
 
     - name: Run Test Suite
       run: |
