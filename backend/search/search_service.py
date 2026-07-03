@@ -1,20 +1,28 @@
-import logging
-from typing import Dict, Any, List
+from typing import Dict, List
+
 from duckduckgo_search import DDGS
-from backend.core.logger import logger
+
 from backend.core.config import settings
+from backend.core.logger import logger
+
 
 class SearchError(Exception):
     """Base exception for search service errors."""
+
     pass
+
 
 class SearchTimeoutError(SearchError):
     """Raised when the search operation times out."""
+
     pass
+
 
 class SearchConnectionError(SearchError):
     """Raised when the search service experiences network failures."""
+
     pass
+
 
 class SearchService:
     def search(self, query: str, max_results: int = 5) -> List[Dict[str, str]]:
@@ -29,7 +37,10 @@ class SearchService:
         query = query.strip()
         max_results = max_results or settings.MAX_SEARCH_RESULTS
 
-        logger.info(f"SearchService starting search for query='{query}' with max_results={max_results}")
+        logger.info(
+            f"SearchService starting search for query='{query}' "
+            f"with max_results={max_results}"
+        )
 
         try:
             results = []
@@ -38,23 +49,40 @@ class SearchService:
                 ddgs_generator = ddgs.text(query, max_results=max_results)
                 if ddgs_generator:
                     for r in ddgs_generator:
-                        results.append({
-                            "title": str(r.get("title", "")),
-                            "url": str(r.get("href", "")),
-                            "snippet": str(r.get("body", ""))
-                        })
-            
-            logger.info(f"SearchService completed search for query='{query}'. Found {len(results)} results.")
+                        results.append(
+                            {
+                                "title": str(r.get("title", "")),
+                                "url": str(r.get("href", "")),
+                                "snippet": str(r.get("body", "")),
+                            }
+                        )
+
+            logger.info(
+                f"SearchService completed search for query='{query}'. "
+                f"Found {len(results)} results."
+            )
             return results
 
         except Exception as e:
             err_msg = str(e).lower()
             if "timeout" in err_msg or "time out" in err_msg:
-                logger.error(f"SearchService timeout error searching for query='{query}': {e}")
+                logger.error(
+                    f"SearchService timeout error searching for query='{query}': {e}"
+                )
                 raise SearchTimeoutError(f"Search timed out: {e}") from e
-            elif "connection" in err_msg or "http" in err_msg or "urllib" in err_msg or "request" in err_msg or "unreachable" in err_msg:
-                logger.error(f"SearchService connection error searching for query='{query}': {e}")
+            elif (
+                "connection" in err_msg
+                or "http" in err_msg
+                or "urllib" in err_msg
+                or "request" in err_msg
+                or "unreachable" in err_msg
+            ):
+                logger.error(
+                    f"SearchService connection error searching for query='{query}': {e}"
+                )
                 raise SearchConnectionError(f"Search connection failed: {e}") from e
             else:
-                logger.error(f"SearchService unexpected error searching for query='{query}': {e}")
+                logger.error(
+                    f"SearchService unexpected error searching for query='{query}': {e}"
+                )
                 raise SearchError(f"Search failed: {e}") from e

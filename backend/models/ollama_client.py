@@ -49,7 +49,8 @@ class OllamaClient:
         )
         self.timeout = timeout if timeout is not None else settings.REQUEST_TIMEOUT
 
-        # Connection check is deferred until check_connection is explicitly called or property is accessed
+        # Connection check is deferred until check_connection is explicitly called
+        # or property is accessed
         self._is_online: Optional[bool] = None
 
     @property
@@ -83,7 +84,8 @@ class OllamaClient:
                 return response
             except requests.Timeout as e:
                 logger.warning(
-                    f"Ollama request timeout on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                    f"Ollama request timeout on {method} {path} "
+                    f"(attempt {attempt}/{max_retries}): {e}"
                 )
                 if attempt == max_retries:
                     raise OllamaTimeoutError(
@@ -91,7 +93,8 @@ class OllamaClient:
                     ) from e
             except requests.ConnectionError as e:
                 logger.warning(
-                    f"Ollama request connection error on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                    f"Ollama request connection error on {method} {path} "
+                    f"(attempt {attempt}/{max_retries}): {e}"
                 )
                 if attempt == max_retries:
                     raise OllamaConnectionError(
@@ -99,7 +102,8 @@ class OllamaClient:
                     ) from e
             except requests.RequestException as e:
                 logger.warning(
-                    f"Ollama request HTTP error on {method} {path} (attempt {attempt}/{max_retries}): {e}"
+                    f"Ollama request HTTP error on {method} {path} "
+                    f"(attempt {attempt}/{max_retries}): {e}"
                 )
                 if attempt == max_retries:
                     status_code = getattr(e.response, "status_code", None)
@@ -126,7 +130,8 @@ class OllamaClient:
                 return True
             else:
                 logger.warning(
-                    f"Ollama connection check returned status {response.status_code} at {self.base_url}"
+                    "Ollama connection check returned status "
+                    f"{response.status_code} at {self.base_url}"
                 )
                 self._is_online = False
                 return False

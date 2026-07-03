@@ -22,8 +22,9 @@ def run_startup_checks(force: bool = False) -> None:
 
     # 1. Configuration loaded log
     logger.info(
-        f"Configuration loaded - Host: {settings.BACKEND_HOST}, Port: {settings.BACKEND_PORT}, "
-        f"Model: {settings.LLM_MODEL}, Chroma DB Path: {settings.CHROMA_DB_PATH}"
+        f"Configuration loaded - Host: {settings.BACKEND_HOST}, "
+        f"Port: {settings.BACKEND_PORT}, Model: {settings.LLM_MODEL}, "
+        f"Chroma DB Path: {settings.CHROMA_DB_PATH}"
     )
 
     # 2. Check ChromaDB directory existence & writability
@@ -35,11 +36,13 @@ def run_startup_checks(force: bool = False) -> None:
             f.write("test")
         os.remove(temp_file)
         logger.info(
-            f"ChromaDB status - directory '{settings.CHROMA_DB_PATH}' is verified and writable."
+            "ChromaDB status - directory "
+            f"'{settings.CHROMA_DB_PATH}' is verified and writable."
         )
     except Exception as e:
         logger.critical(
-            f"ChromaDB status - directory '{settings.CHROMA_DB_PATH}' is NOT writable: {e}"
+            "ChromaDB status - directory "
+            f"'{settings.CHROMA_DB_PATH}' is NOT writable: {e}"
         )
         # Stop application if critical ChromaDB path is unusable
         raise RuntimeError(f"Critical ChromaDB path is not writable: {e}") from e
@@ -70,11 +73,13 @@ def run_startup_checks(force: bool = False) -> None:
             model_exists = ai_service.client.has_model(settings.LLM_MODEL)
             if model_exists:
                 logger.info(
-                    f"Ollama status - configured model '{settings.LLM_MODEL}' exists and is ready."
+                    "Ollama status - configured model "
+                    f"'{settings.LLM_MODEL}' exists and is ready."
                 )
             else:
                 logger.warning(
-                    f"Ollama status - configured model '{settings.LLM_MODEL}' was not found on the Ollama server."
+                    "Ollama status - configured model "
+                    f"'{settings.LLM_MODEL}' was not found on the Ollama server."
                 )
         else:
             logger.warning(

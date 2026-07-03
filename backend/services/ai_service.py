@@ -20,7 +20,7 @@ class AIService:
         model: Optional[str] = None,
         system: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Generate a text response synchronously from Ollama.
@@ -30,17 +30,23 @@ class AIService:
         try:
             # First check if Ollama is online
             if not self.client.check_connection():
-                raise OllamaConnectionError(f"Ollama server at {self.client.base_url} is unreachable.")
+                raise OllamaConnectionError(
+                    f"Ollama server at {self.client.base_url} is unreachable."
+                )
 
             response = self.client.generate(
                 model=model_name,
                 prompt=prompt,
                 system=system,
                 options=options,
-                timeout=timeout
+                timeout=timeout,
             )
             return response
-        except (OllamaConnectionError, OllamaTimeoutError, OllamaModelNotFoundError) as e:
+        except (
+            OllamaConnectionError,
+            OllamaTimeoutError,
+            OllamaModelNotFoundError,
+        ) as e:
             logger.error(f"AIService generate response error: {e}")
             raise
         except Exception as e:
@@ -53,7 +59,7 @@ class AIService:
         model: Optional[str] = None,
         system: Optional[str] = None,
         options: Optional[Dict[str, Any]] = None,
-        timeout: Optional[int] = None
+        timeout: Optional[int] = None,
     ) -> Iterator[Dict[str, Any]]:
         """
         Yield streaming text generation chunks from Ollama.
@@ -62,16 +68,22 @@ class AIService:
         logger.info(f"AIService stream response requested for model '{model_name}'")
         try:
             if not self.client.check_connection():
-                raise OllamaConnectionError(f"Ollama server at {self.client.base_url} is unreachable.")
+                raise OllamaConnectionError(
+                    f"Ollama server at {self.client.base_url} is unreachable."
+                )
 
             yield from self.client.generate_stream(
                 model=model_name,
                 prompt=prompt,
                 system=system,
                 options=options,
-                timeout=timeout
+                timeout=timeout,
             )
-        except (OllamaConnectionError, OllamaTimeoutError, OllamaModelNotFoundError) as e:
+        except (
+            OllamaConnectionError,
+            OllamaTimeoutError,
+            OllamaModelNotFoundError,
+        ) as e:
             logger.error(f"AIService stream response error: {e}")
             raise
         except Exception as e:
@@ -88,16 +100,21 @@ class AIService:
             "connection": "connected" if is_connected else "disconnected",
             "base_url": self.client.base_url,
             "default_model": self.client.default_model,
-            "model_available": False
+            "model_available": False,
         }
 
         if is_connected:
             try:
-                status["model_available"] = self.client.has_model(self.client.default_model)
+                status["model_available"] = self.client.has_model(
+                    self.client.default_model
+                )
             except Exception as e:
-                logger.warning(f"AIService health_check could not verify model availability: {e}")
+                logger.warning(
+                    f"AIService health_check could not verify model availability: {e}"
+                )
 
         return status
+
 
 # Singleton instance of AIService
 ai_service = AIService()

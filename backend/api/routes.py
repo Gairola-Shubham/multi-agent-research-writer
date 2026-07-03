@@ -52,7 +52,7 @@ async def health():
     # 3. Search status check
     search_status = "unhealthy"
     try:
-        # Reuse existing SearchService instance from workflow to avoid redundant initialization
+        # Reuse SearchService instance from workflow to avoid redundant initialization
         if (
             workflow is not None
             and hasattr(workflow, "research_agent")
@@ -72,7 +72,8 @@ async def health():
     # 4. Memory status check
     memory_status = "unhealthy"
     try:
-        # Reuse existing MemoryService instance from workflow to avoid redundant persistent client connections
+        # Reuse MemoryService instance from workflow to avoid redundant
+        # persistent client connections
         if (
             workflow is not None
             and hasattr(workflow, "research_agent")
@@ -118,7 +119,8 @@ async def health():
 @router.post("/research", response_model=ResearchResponse)
 async def research(payload: ResearchRequest):
     logger.info(
-        f"Research request received for topic: '{payload.topic}' (style: '{payload.style}', depth: '{payload.depth}')"
+        f"Research request received for topic: '{payload.topic}' "
+        f"(style: '{payload.style}', depth: '{payload.depth}')"
     )
     logger.info(f"Workflow started for topic: '{payload.topic}'")
 
@@ -132,7 +134,7 @@ async def research(payload: ResearchRequest):
             logger.error(
                 f"Workflow execution validation error for topic '{payload.topic}': {e}"
             )
-            raise ValueError(f"Failed to generate structured research: {e}")
+            raise ValueError(f"Failed to generate structured research: {e}") from e
         except Exception as e:
             logger.error(f"Workflow failed for topic '{payload.topic}': {e}")
             raise
@@ -158,33 +160,33 @@ async def research(payload: ResearchRequest):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Failed to generate structured research: {str(e)}",
-        )
+        ) from e
     except OllamaConnectionError as e:
         logger.error(f"Ollama connection error for topic '{payload.topic}': {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Ollama offline: {str(e)}",
-        )
+        ) from e
     except OllamaModelNotFoundError as e:
         logger.error(f"Ollama model not found error for topic '{payload.topic}': {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Model not found: {str(e)}"
-        )
+        ) from e
     except OllamaTimeoutError as e:
         logger.error(f"Ollama request timeout for topic '{payload.topic}': {e}")
         raise HTTPException(
             status_code=status.HTTP_504_GATEWAY_TIMEOUT,
             detail=f"Request timeout: {str(e)}",
-        )
+        ) from e
     except OllamaError as e:
         logger.error(f"Ollama error for topic '{payload.topic}': {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Ollama service error: {str(e)}",
-        )
+        ) from e
     except Exception as e:
         logger.critical(f"Unhandled error in research endpoint: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Internal server error: {str(e)}",
-        )
+        ) from e

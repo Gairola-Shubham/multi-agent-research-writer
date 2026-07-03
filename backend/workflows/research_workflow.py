@@ -1,13 +1,14 @@
-import logging
-from typing import Dict, Any, TypedDict
-from langgraph.graph import StateGraph, START, END
+from typing import Any, Dict, TypedDict
 
+from langgraph.graph import END, START, StateGraph
+
+from backend.agents.editor_agent import EditorAgent
 from backend.agents.planner_agent import PlannerAgent
 from backend.agents.research_agent import ResearchAgent
-from backend.agents.writer_agent import WriterAgent
 from backend.agents.reviewer_agent import ReviewerAgent
-from backend.agents.editor_agent import EditorAgent
+from backend.agents.writer_agent import WriterAgent
 from backend.core.logger import logger
+
 
 class ResearchWorkflowState(TypedDict):
     topic: str
@@ -19,6 +20,7 @@ class ResearchWorkflowState(TypedDict):
     review: Dict[str, Any]
     final: Dict[str, Any]
 
+
 class ResearchWorkflow:
     def __init__(
         self,
@@ -26,7 +28,7 @@ class ResearchWorkflow:
         research_agent: Any = None,
         writer: Any = None,
         reviewer: Any = None,
-        editor: Any = None
+        editor: Any = None,
     ):
         self.planner = planner or PlannerAgent()
         self.research_agent = research_agent or ResearchAgent()
@@ -39,9 +41,7 @@ class ResearchWorkflow:
         logger.info("Node entered: PlannerNode")
         try:
             plan = self.planner.create_plan(
-                topic=state["topic"],
-                style=state["style"],
-                depth=state["depth"]
+                topic=state["topic"], style=state["style"], depth=state["depth"]
             )
             logger.info("Node completed: PlannerNode")
             return {"plan": plan}
@@ -91,26 +91,29 @@ class ResearchWorkflow:
 
     def _build_graph(self):
         builder = StateGraph(ResearchWorkflowState)
-        
+
         # Add nodes
         builder.add_node("PlannerNode", self.PlannerNode)
         builder.add_node("ResearchNode", self.ResearchNode)
         builder.add_node("WriterNode", self.WriterNode)
         builder.add_node("ReviewerNode", self.ReviewerNode)
         builder.add_node("EditorNode", self.EditorNode)
-        
-        # Connect nodes in order: START -> Planner -> Research -> Writer -> Reviewer -> Editor -> END
+
+        # Connect nodes in order:
+        # START -> Planner -> Research -> Writer -> Reviewer -> Editor -> END
         builder.add_edge(START, "PlannerNode")
         builder.add_edge("PlannerNode", "ResearchNode")
         builder.add_edge("ResearchNode", "WriterNode")
         builder.add_edge("WriterNode", "ReviewerNode")
         builder.add_edge("ReviewerNode", "EditorNode")
         builder.add_edge("EditorNode", END)
-        
+
         return builder.compile()
 
     def run(self, topic: str, style: str, depth: str) -> Dict[str, Any]:
-        logger.info(f"Workflow started for topic='{topic}', style='{style}', depth='{depth}'")
+        logger.info(
+            f"Workflow started for topic='{topic}', style='{style}', depth='{depth}'"
+        )
         initial_state: ResearchWorkflowState = {
             "topic": topic,
             "style": style,
@@ -119,7 +122,7 @@ class ResearchWorkflow:
             "research": {},
             "draft": {},
             "review": {},
-            "final": {}
+            "final": {},
         }
         try:
             final_state = self.graph.invoke(initial_state)
@@ -128,6 +131,7 @@ class ResearchWorkflow:
         except Exception as e:
             logger.error(f"Workflow failed: {e}")
             raise
+
 
 def run(topic: str, style: str, depth: str) -> Dict[str, Any]:
     """

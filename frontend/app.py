@@ -1,9 +1,11 @@
 import os
 import tempfile
+
 import requests
 import streamlit as st
-from backend.utils.export_service import ExportService
+
 from backend.core.logger import logger
+from backend.utils.export_service import ExportService
 
 logger.info("Streamlit started")
 
@@ -13,7 +15,7 @@ st.set_page_config(
     page_title="AI Multi-Agent Research Writer",
     page_icon="📝",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Initialize Session State values where appropriate
@@ -55,7 +57,9 @@ st.sidebar.markdown(
 
 # --- Main Page Layout ---
 st.title("📝 AI Multi-Agent Research Writer")
-st.markdown("Generate publication-ready technical and academic research reports autonomously.")
+st.markdown(
+    "Generate publication-ready technical and academic research reports autonomously."
+)
 st.markdown("---")
 
 # Main page inputs
@@ -64,24 +68,31 @@ with col_style:
     st.session_state.style = st.selectbox(
         "Writing Style",
         ["Academic", "Technical", "Blog", "Business", "Simple"],
-        index=["Academic", "Technical", "Blog", "Business", "Simple"].index(st.session_state.style)
+        index=["Academic", "Technical", "Blog", "Business", "Simple"].index(
+            st.session_state.style
+        ),
     )
 with col_depth:
     st.session_state.depth = st.selectbox(
         "Research Depth",
         ["Brief", "Standard", "Detailed"],
-        index=["Brief", "Standard", "Detailed"].index(st.session_state.depth)
+        index=["Brief", "Standard", "Detailed"].index(st.session_state.depth),
     )
 
 st.session_state.topic = st.text_input(
     "Research Topic",
     value=st.session_state.topic,
-    placeholder="Enter the topic you want to research (e.g., Quantum Computing, CRISPR Gene Editing)..."
+    placeholder=(
+        "Enter the topic you want to research (e.g., Quantum Computing, "
+        "CRISPR Gene Editing)..."
+    ),
 )
 
 col_buttons = st.columns([1, 4])
 with col_buttons[0]:
-    generate_clicked = st.button("Generate Research", type="primary", use_container_width=True)
+    generate_clicked = st.button(
+        "Generate Research", type="primary", use_container_width=True
+    )
 with col_buttons[1]:
     # Clear button to reset the state
     if st.button("Clear Results", use_container_width=True):
@@ -97,35 +108,52 @@ if generate_clicked:
     else:
         st.session_state.result = None
         status_placeholder = st.empty()
-        status_placeholder.info("Orchestrating AI Research Writer workflow (this may take up to a minute)...")
-        
-        with st.spinner("Executing planning, research, writing, review, and editing steps..."):
+        status_placeholder.info(
+            "Orchestrating AI Research Writer workflow "
+            "(this may take up to a minute)..."
+        )
+
+        with st.spinner(
+            "Executing planning, research, writing, review, and editing steps..."
+        ):
             try:
                 response = requests.post(
                     backend_url,
                     json={
                         "topic": st.session_state.topic,
                         "style": st.session_state.style,
-                        "depth": st.session_state.depth
+                        "depth": st.session_state.depth,
                     },
-                    timeout=300
+                    timeout=300,
                 )
-                
+
                 if response.status_code == 200:
                     st.session_state.result = response.json()
-                    status_placeholder.success("Research report generated successfully!")
+                    status_placeholder.success(
+                        "Research report generated successfully!"
+                    )
                     st.rerun()
                 elif response.status_code == 422:
                     detail = response.json().get("detail", "Validation Error")
-                    status_placeholder.error(f"Validation error returned by backend: {detail}")
+                    status_placeholder.error(
+                        f"Validation error returned by backend: {detail}"
+                    )
                 else:
                     detail = response.text
-                    status_placeholder.error(f"Backend returned an unexpected error ({response.status_code}): {detail}")
-                    
+                    status_placeholder.error(
+                        "Backend returned an unexpected error "
+                        f"({response.status_code}): {detail}"
+                    )
+
             except requests.exceptions.ConnectionError:
-                status_placeholder.error("Failed to connect to the backend server. Please verify it is running on port 8000.")
+                status_placeholder.error(
+                    "Failed to connect to the backend server. "
+                    "Please verify it is running on port 8000."
+                )
             except requests.exceptions.Timeout:
-                status_placeholder.error("The request to the backend timed out. Please try again.")
+                status_placeholder.error(
+                    "The request to the backend timed out. Please try again."
+                )
             except Exception as e:
                 status_placeholder.error(f"An unexpected error occurred: {e}")
 
@@ -143,13 +171,13 @@ st.markdown("---")
 
 if has_result:
     st.header(result.get("title", "Research Report"))
-    
+
     col_article, col_review = st.columns([3, 1])
-    
+
     with col_article:
         st.subheader("Final Article")
         st.markdown(result.get("final_markdown", ""))
-        
+
     with col_review:
         st.subheader("Review Score")
         review = result.get("review", {})
@@ -157,9 +185,9 @@ if has_result:
         st.metric(
             label="Quality Rating",
             value=str(score),
-            help="Evaluated by the Reviewer Agent on a scale of 0-100."
+            help="Evaluated by the Reviewer Agent on a scale of 0-100.",
         )
-        
+
         st.subheader("Strengths")
         strengths = review.get("strengths", [])
         if strengths:
@@ -167,7 +195,7 @@ if has_result:
                 st.markdown(f"- {s}")
         else:
             st.markdown("*No specific strengths noted.*")
-            
+
         st.subheader("Issues")
         issues = review.get("issues", [])
         if issues:
@@ -175,7 +203,7 @@ if has_result:
                 st.markdown(f"- {i}")
         else:
             st.markdown("*No specific issues identified.*")
-            
+
         st.subheader("Suggestions")
         suggestions = review.get("suggestions", [])
         if suggestions:
@@ -193,9 +221,9 @@ if has_result:
             st.markdown("*No changes applied.*")
 
     st.markdown("---")
-    
+
     col_sources, col_memory = st.columns(2)
-    
+
     with col_sources:
         st.subheader("Sources & Citations")
         sources = result.get("sources", [])
@@ -203,8 +231,10 @@ if has_result:
             for src in sources:
                 st.markdown(f"- [{src.get('title', 'Source')}]({src.get('url', '#')})")
         else:
-            st.info("Citations and sources are embedded directly inside the Markdown text.")
-            
+            st.info(
+                "Citations and sources are embedded directly inside the Markdown text."
+            )
+
     with col_memory:
         st.subheader("Memory Hits")
         memory_hits = result.get("memory_hits", [])
@@ -212,7 +242,10 @@ if has_result:
             for hit in memory_hits:
                 st.markdown(f"- {hit}")
         else:
-            st.info("No explicit memory hits returned by the API; vector memory is utilized internally by the agent during generation.")
+            st.info(
+                "No explicit memory hits returned by the API; vector memory "
+                "is utilized internally by the agent during generation."
+            )
 
 else:
     col_article, col_review = st.columns([3, 1])
@@ -222,21 +255,24 @@ else:
             label="Report Content (Markdown Preview)",
             value="The final generated article in markdown will appear here.",
             height=300,
-            disabled=True
+            disabled=True,
         )
     with col_review:
         st.subheader("Review Score")
         st.metric(label="Quality Rating", value="N/A")
 
     st.markdown("---")
-    
+
     col_sources, col_memory = st.columns(2)
     with col_sources:
         st.subheader("Sources & Citations")
         st.info("Web search citations used by the researcher will be listed here.")
     with col_memory:
         st.subheader("Memory Hits")
-        st.info("RAG search results retrieved from local ChromaDB memory will be displayed here.")
+        st.info(
+            "RAG search results retrieved from local ChromaDB memory "
+            "will be displayed here."
+        )
 
 st.markdown("---")
 
@@ -252,20 +288,22 @@ report_title = "report"
 if has_result:
     report_title = result.get("title", "report")
     # Sanitize title for filename
-    report_title = "".join(c for c in report_title if c.isalnum() or c in (" ", "_", "-")).strip()
+    report_title = "".join(
+        c for c in report_title if c.isalnum() or c in (" ", "_", "-")
+    ).strip()
     report_title = report_title.replace(" ", "_")
-    
+
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
             md_path = os.path.join(tmp_dir, "report.md")
             pdf_path = os.path.join(tmp_dir, "report.pdf")
             docx_path = os.path.join(tmp_dir, "report.docx")
-            
+
             # Generate exports using ExportService
             ExportService.export_markdown(result, md_path)
             ExportService.export_pdf(result, pdf_path)
             ExportService.export_docx(result, docx_path)
-            
+
             # Read files back into memory
             if os.path.exists(md_path):
                 with open(md_path, "rb") as f:
@@ -277,7 +315,10 @@ if has_result:
                 with open(docx_path, "rb") as f:
                     docx_data = f.read()
     except Exception as e:
-        st.error(f"⚠️ Export failed: Unable to generate downloadable documents. Error: {str(e)}")
+        st.error(
+            "⚠️ Export failed: Unable to generate downloadable documents. "
+            f"Error: {str(e)}"
+        )
 
 # Fallback to string encode if empty (e.g. if mocked or error)
 if not markdown_data and has_result:
@@ -290,7 +331,7 @@ with export_col1:
         file_name=f"{report_title}.pdf",
         mime="application/pdf",
         disabled=not has_result,
-        use_container_width=True
+        use_container_width=True,
     )
 with export_col2:
     st.download_button(
@@ -299,7 +340,7 @@ with export_col2:
         file_name=f"{report_title}.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         disabled=not has_result,
-        use_container_width=True
+        use_container_width=True,
     )
 with export_col3:
     st.download_button(
@@ -308,5 +349,5 @@ with export_col3:
         file_name=f"{report_title}.md",
         mime="text/markdown",
         disabled=not has_result,
-        use_container_width=True
+        use_container_width=True,
     )
