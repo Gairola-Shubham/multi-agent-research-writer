@@ -2,6 +2,7 @@ import json
 from typing import Any, Dict
 
 from backend.core.logger import logger
+from backend.prompts.prompt_loader import load_prompt
 from backend.services.ai_service import ai_service
 
 
@@ -19,27 +20,7 @@ class PlannerAgent:
             f"topic='{topic}', style='{style}', depth='{depth}'"
         )
 
-        prompt = (
-            "You are a research planning assistant. Your task is to output a "
-            "structured research plan as a JSON object.\n"
-            "You must output ONLY a valid JSON object. Do not include any "
-            "explanation, conversational text, or markdown formatting "
-            "(like ```json).\n\n"
-            "The JSON object must strictly match this structure:\n"
-            "{\n"
-            '  "topic": "The exact topic of research",\n'
-            '  "difficulty": "Estimated difficulty level (e.g., Easy, Medium, '
-            'Hard)",\n'
-            '  "estimated_sources": 5,\n'
-            '  "sections": ["Introduction", "Core Concepts", "Applications", '
-            '"Challenges", "Conclusion"],\n'
-            '  "execution_order": ["Introduction", "Core Concepts", '
-            '"Applications", "Challenges", "Conclusion"]\n'
-            "}\n\n"
-            f"Topic: {topic}\n"
-            f"Style: {style}\n"
-            f"Depth: {depth}\n"
-        )
+        prompt = load_prompt("planner", topic=topic, style=style, depth=depth)
 
         max_attempts = 3
         raw_text = ""
