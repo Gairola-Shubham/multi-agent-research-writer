@@ -6,17 +6,17 @@ This checklist contains all steps necessary to package, verify, and launch a new
 
 ## 1. Code Integration & Verification
 
-- [ ] Ensure all feature branches are merged cleanly into `main`.
-- [ ] Run the Python formatter and linter locally to check syntax consistency:
+- [x] Ensure all feature branches are merged cleanly into `main`.
+- [x] Run the Python formatter and linter locally to check syntax consistency:
   ```bash
   ruff format .
   ruff check .
   ```
-- [ ] Run the complete test suite to ensure that zero regression bugs exist:
+- [x] Run the complete test suite to ensure that zero regression bugs exist:
   ```bash
   python -m pytest
   ```
-  *(Verify that all 90 tests pass successfully)*.
+  *(Verify that all 87 tests pass successfully)*.
 
 ---
 
@@ -46,7 +46,7 @@ This checklist contains all steps necessary to package, verify, and launch a new
 
 - [ ] **Model Download**: Verify that Ollama starts and the targeted model is available:
   ```bash
-  ollama pull qwen2.5:7b
+  ollama pull phi3:latest
   ollama list
   ```
 - [ ] **Running Backend**: Start the FastAPI server and check the interactive documentation page:
@@ -87,8 +87,8 @@ This checklist contains all steps necessary to package, verify, and launch a new
 
 ## 6. Release Finalization
 
-- [ ] Bump version numbers in [pyproject.toml](file:///C:/Users/Shivangi/Desktop/Multi-Agent%20Research%20writer/pyproject.toml).
-- [ ] Update [CHANGELOG.md](file:///C:/Users/Shivangi/Desktop/Multi-Agent%20Research%20writer/CHANGELOG.md) with details for the new version.
+- [x] Bump version numbers in [pyproject.toml](file:///C:/Users/Shivangi/Desktop/Multi-Agent%20Research%20writer/pyproject.toml).
+- [x] Update [CHANGELOG.md](file:///C:/Users/Shivangi/Desktop/Multi-Agent%20Research%20writer/CHANGELOG.md) with details for the new version.
 - [ ] Push changes, tag the commit, and release the new tag on GitHub:
   ```bash
   git tag -a v0.2.0 -m "Release version 0.2.0"

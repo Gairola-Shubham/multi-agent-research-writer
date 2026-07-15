@@ -8,7 +8,7 @@ check_conn_patcher = patch(
 )
 list_models_patcher = patch(
     "backend.models.ollama_client.OllamaClient.list_models",
-    return_value=[{"name": "qwen2.5:7b"}],
+    return_value=[{"name": "phi3:latest"}],
 )
 has_model_patcher = patch(
     "backend.models.ollama_client.OllamaClient.has_model", return_value=True
@@ -38,7 +38,7 @@ ai_health_patcher = patch(
         "status": "healthy",
         "connection": "connected",
         "base_url": "http://localhost:11434",
-        "default_model": "qwen2.5:7b",
+        "default_model": "phi3:latest",
         "model_available": True,
     },
 )

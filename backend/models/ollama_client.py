@@ -233,11 +233,23 @@ class OllamaClient:
                 f"Model '{model}' is not installed on Ollama server."
             )
 
-        payload = {"model": model, "prompt": prompt, "stream": False}
+        options_payload = {
+            "temperature": 0.2,
+            "num_ctx": 2048,
+            "num_predict": 384,
+        }
+        if options:
+            options_payload.update(options)
+
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": options_payload,
+            "keep_alive": "10m",
+        }
         if system:
             payload["system"] = system
-        if options:
-            payload["options"] = options
 
         response = self._request("POST", "/api/generate", json=payload, timeout=timeout)
         return response.json()
@@ -259,11 +271,23 @@ class OllamaClient:
                 f"Model '{model}' is not installed on Ollama server."
             )
 
-        payload = {"model": model, "prompt": prompt, "stream": True}
+        options_payload = {
+            "temperature": 0.2,
+            "num_ctx": 2048,
+            "num_predict": 384,
+        }
+        if options:
+            options_payload.update(options)
+
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "stream": True,
+            "options": options_payload,
+            "keep_alive": "10m",
+        }
         if system:
             payload["system"] = system
-        if options:
-            payload["options"] = options
 
         url = f"{self.base_url}/api/generate"
         t = timeout if timeout is not None else self.timeout

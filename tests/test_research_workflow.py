@@ -39,12 +39,6 @@ def test_research_workflow_success():
     }
 
     mock_editor = MagicMock()
-    mock_editor.edit_report.return_value = {
-        "topic": "Test Topic",
-        "title": "Test Title",
-        "final_markdown": "# Test Title (Edited)",
-        "changes_applied": ["Polished draft"],
-    }
 
     # Trace the order of calls
     call_order = []
@@ -65,15 +59,10 @@ def test_research_workflow_success():
         call_order.append("ReviewerAgent")
         return mock_reviewer.review_report.return_value
 
-    def editor_side_effect(*args, **kwargs):
-        call_order.append("EditorAgent")
-        return mock_editor.edit_report.return_value
-
     mock_planner.create_plan.side_effect = planner_side_effect
     mock_research.conduct_research.side_effect = research_side_effect
     mock_writer.write_report.side_effect = writer_side_effect
     mock_reviewer.review_report.side_effect = reviewer_side_effect
-    mock_editor.edit_report.side_effect = editor_side_effect
 
     # Inject mock agents into workflow
     workflow = ResearchWorkflow(
@@ -87,13 +76,12 @@ def test_research_workflow_success():
     # Run workflow
     final_state = workflow.run(topic="Test Topic", style="Academic", depth="Brief")
 
-    # Verify execution order
+    # Verify execution order (EditorAgent is bypassed)
     assert call_order == [
         "PlannerAgent",
         "ResearchAgent",
         "WriterAgent",
         "ReviewerAgent",
-        "EditorAgent",
     ]
 
     # Verify state updates
@@ -104,7 +92,11 @@ def test_research_workflow_success():
     assert final_state["research"] == mock_research.conduct_research.return_value
     assert final_state["draft"] == mock_writer.write_report.return_value
     assert final_state["review"] == mock_reviewer.review_report.return_value
-    assert final_state["final"] == mock_editor.edit_report.return_value
+    assert final_state["final"]["topic"] == "Test Topic"
+    assert final_state["final"]["final_markdown"] == "# Test Title"
+    assert final_state["final"]["changes_applied"] == [
+        "Editor bypassed for performance optimization."
+    ]
 
 
 def test_research_workflow_node_failure():
@@ -175,12 +167,6 @@ def test_workflow_agent_retry_success(mock_ai_generate):
         "ready_for_editing": True,
     }
     mock_editor = MagicMock()
-    mock_editor.edit_report.return_value = {
-        "topic": "Quantum",
-        "title": "Title",
-        "final_markdown": "# Title",
-        "changes_applied": [],
-    }
 
     workflow = ResearchWorkflow(
         research_agent=mock_research,

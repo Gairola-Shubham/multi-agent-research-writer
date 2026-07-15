@@ -30,7 +30,7 @@ app = FastAPI(
     description=(
         "Backend API for conducting comprehensive, multi-agent automated research."
     ),
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 

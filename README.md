@@ -30,7 +30,7 @@ For detailed architecture details, see [docs/architecture.md](file:///C:/Users/S
 *   **Web API Framework**: FastAPI
 *   **User Interface**: Streamlit
 *   **Agent Workflow Engine**: LangGraph
-*   **Local LLM Service**: Ollama (optimized for Qwen 2.5 7B model)
+*   **Local LLM Service**: Ollama (optimized for phi3:latest model)
 *   **Vector Database (RAG)**: ChromaDB
 *   **Web Scraping / Crawling**: DuckDuckGo Search API (`duckduckgo-search`)
 *   **Document Generation Utilities**: ReportLab (PDF), python-docx (DOCX)
@@ -72,7 +72,7 @@ cp .env.example .env
 ### 4. Ollama Setup
 Pull the default model:
 ```bash
-ollama pull qwen2.5:7b
+ollama pull phi3:latest
 ```
 
 ---

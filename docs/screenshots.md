@@ -103,6 +103,6 @@ Visual representation of raw JSON output returned by the FastAPI server `/health
   "search": "healthy",
   "memory": "healthy",
   "workflow": "healthy",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
 ```

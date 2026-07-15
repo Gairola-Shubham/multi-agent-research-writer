@@ -53,7 +53,7 @@ Open the newly created `.env` file and verify or adjust the settings:
 *   `BACKEND_PORT`: Host port mapping for backend FastAPI (Default: `8000`).
 *   `FRONTEND_PORT`: Host port mapping for Streamlit (Default: `8501`).
 *   `OLLAMA_BASE_URL`: Base connection endpoint for Ollama (e.g., `http://localhost:11434` or `http://host.docker.internal:11434` when inside Docker).
-*   `LLM_MODEL`: Local model name to target (Default: `qwen2.5:7b`).
+*   `LLM_MODEL`: Local model name to target (Default: `phi3:latest`).
 *   `CHROMA_DB_PATH`: Folder path for ChromaDB storage (Default: `./data/chroma`).
 
 ---
@@ -70,9 +70,9 @@ This system is configured to run LLMs locally to avoid cloud subscription fees a
 *   **Windows**: Download and execute the installation setup file from the [Ollama Download Page](https://ollama.com/download/windows).
 
 ### Step B: Download the LLM Model
-Ensure the Ollama background service is running, and pull the **Qwen 2.5 (7B)** model:
+Ensure the Ollama background service is running, and pull the **Phi-3 (latest)** model:
 ```bash
-ollama pull qwen2.5:7b
+ollama pull phi3:latest
 ```
 
 Verify that the model is loaded:

@@ -12,7 +12,7 @@ The application is structured as a decoupled client-server system consisting of 
 graph TD
     User([User]) <--> Frontend[Streamlit Frontend]
     Frontend <--> Backend[FastAPI Backend]
-    Backend <--> Ollama[Ollama Server - Qwen 2.5]
+    Backend <--> Ollama[Ollama Server - phi3:latest]
     Backend <--> Chroma[ChromaDB Vector DB]
     Backend --> Search[DuckDuckGo Search]
     Backend --> Export[Export Service - PDF/Docx]

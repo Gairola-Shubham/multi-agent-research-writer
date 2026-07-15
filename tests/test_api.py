@@ -23,7 +23,7 @@ def test_health_endpoint():
             "status": "healthy",
             "connection": "connected",
             "base_url": "http://localhost:11434",
-            "default_model": "qwen2.5:7b",
+            "default_model": "phi3:latest",
             "model_available": True,
         }
         response = client.get("/health")

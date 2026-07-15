@@ -41,7 +41,7 @@ Performs structural checks across backend service components (Ollama connection,
   "search": "healthy",
   "memory": "healthy",
   "workflow": "healthy",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
 ```
 
@@ -54,7 +54,7 @@ Performs structural checks across backend service components (Ollama connection,
   "search": "healthy",
   "memory": "unhealthy",
   "workflow": "healthy",
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
 ```
 
